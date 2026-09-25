@@ -12,13 +12,24 @@ using System.Windows.Forms;
 using System.Web.Script.Serialization;
 using MediaPlayer = System.Windows.Media.MediaPlayer;
 
+[assembly: System.Reflection.AssemblyTitle("lock in")]
+[assembly: System.Reflection.AssemblyProduct("lock in")]
+[assembly: System.Reflection.AssemblyCompany("50kfunded")]
+
 namespace NowAndDoing
 {
     internal static class Program
     {
+        internal const string WindowsAppId = "FiftyKFunded.LockIn";
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
+
         [STAThread]
         private static void Main()
         {
+            int result = SetCurrentProcessExplicitAppUserModelID(WindowsAppId);
+            if (result < 0) Marshal.ThrowExceptionForHR(result);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new ReferenceForm());

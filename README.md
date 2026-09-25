@@ -20,6 +20,8 @@ i made a small windows app where i can set what im studying and has its own loca
 
 your songs stay on your pc. the app reads them from `Desktop\music` and saves its settings in `%LOCALAPPDATA%\NowAndDoing\settings.json`.
 
+if you want it in windows search, put [install.ps1](install.ps1) beside `lock in.exe` and run `powershell -ExecutionPolicy Bypass -File .\install.ps1` from that folder. it copies the app into your Programs folder and adds it to Start.
+
 ## building it
 
 on windows, run `powershell -ExecutionPolicy Bypass -File .\build.ps1` from this folder. it puts the new app in `dist\lock in.exe`.
