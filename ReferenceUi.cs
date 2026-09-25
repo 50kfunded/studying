@@ -128,7 +128,7 @@ namespace NowAndDoing
             player.MediaEnded += delegate { MediaEnded(); };
             player.MediaFailed += (sender, args) => { MediaFailed(args.ErrorException == null ? "This audio file could not be played." : args.ErrorException.Message); };
             rpc = new DiscordRpc(SetDiscordStatus);
-            rpc.Set(settings.AppId, new PresenceState());
+            rpc.Set(new PresenceState());
             tick = new System.Windows.Forms.Timer();
             tick.Interval = 500;
             tick.Tick += delegate { Invalidate(); };
@@ -525,7 +525,7 @@ namespace NowAndDoing
             if (layout.PrevButton.Contains(p)) { Previous(); return; }
             if (layout.PlayButton.Contains(p)) { TogglePlay(); return; }
             if (layout.NextButton.Contains(p)) { Next(); return; }
-            if (layout.FooterButton.Contains(p)) { if (discordStatus != "Connected to Discord") ShowSettings(); else ShowDiscordPreview(); }
+            if (layout.FooterButton.Contains(p)) { if (discordStatus != "Connected to Discord") ShowDiscordStatus(); else ShowDiscordPreview(); }
         }
 
         private void SetVolume(int mouseX, Rectangle bar)
@@ -744,7 +744,6 @@ namespace NowAndDoing
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.BackColor = CardBottom;
             menu.ForeColor = White;
-            menu.Items.Add("Discord setup", null, delegate { ShowSettings(); });
             menu.Items.Add("Song queue", null, delegate { ShowQueue(); });
             ToolStripItem status = menu.Items.Add(discordStatus);
             status.Enabled = false;
@@ -754,34 +753,9 @@ namespace NowAndDoing
             menu.Show(this, new Point(layout.Width - 165, layout.Footer - menu.PreferredSize.Height - 4));
         }
 
-        private void ShowSettings()
+        private void ShowDiscordStatus()
         {
-            using (Form dialog = new Form())
-            {
-                dialog.Text = "Discord setup";
-                dialog.ClientSize = new Size(390, 190);
-                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
-                dialog.MaximizeBox = false;
-                dialog.MinimizeBox = false;
-                dialog.StartPosition = FormStartPosition.CenterParent;
-                dialog.BackColor = Back;
-                dialog.ForeColor = White;
-                dialog.Font = regularFont;
-                Label heading = new Label { Text = "Discord application ID", Left = 20, Top = 20, Width = 335, Height = 25, Font = boldFont, ForeColor = White };
-                Label help = new Label { Text = "optional: use your own discord app id instead.", Left = 20, Top = 52, Width = 350, Height = 25, ForeColor = Muted };
-                TextBox input = new TextBox { Text = settings.AppId, Left = 20, Top = 82, Width = 350, Font = regularFont, BackColor = CardBottom, ForeColor = White, BorderStyle = BorderStyle.FixedSingle };
-                Label warning = new Label { Left = 20, Top = 111, Width = 350, Height = 19, ForeColor = Color.FromArgb(230, 157, 157) };
-                Button save = new Button { Text = "Save", Left = 290, Top = 143, Width = 80, Height = 30, FlatStyle = FlatStyle.Flat, BackColor = White, ForeColor = Back };
-                save.FlatAppearance.BorderSize = 0;
-                save.Click += delegate
-                {
-                    if (!DiscordRpc.IsValidId(input.Text.Trim())) { warning.Text = "Enter a valid numeric Application ID."; return; }
-                    settings.AppId = input.Text.Trim(); settings.Save(); UpdatePresence(); dialog.Close();
-                };
-                dialog.Controls.AddRange(new Control[] { heading, help, input, warning, save });
-                dialog.AcceptButton = save;
-                dialog.ShowDialog(this);
-            }
+            MessageBox.Show(this, discordStatus, "Discord activity", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void ShowDiscordPreview()
@@ -813,7 +787,7 @@ namespace NowAndDoing
                 state.FocusStart = (long)(focusStart - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
             state.Playing = playing && current >= 0 && current < tracks.Count;
             state.Title = state.Playing ? tracks[current].Title : "";
-            rpc.Set(settings.AppId, state);
+            rpc.Set(state);
         }
 
 #if VISUAL_QA

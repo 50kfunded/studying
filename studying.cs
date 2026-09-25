@@ -28,15 +28,13 @@ namespace NowAndDoing
     internal sealed class Settings
     {
         // discord uses this app id, so nobody has to set one up first
-        public const string DefaultAppId = "1552779992709079194";
-        public string AppId { get; set; }
+        public const string ApplicationId = "1552779992709079194";
         public List<string> Files { get; set; }
         public int Volume { get; set; }
         public bool Shuffle { get; set; }
 
         public Settings()
         {
-            AppId = DefaultAppId;
             Files = new List<string>();
             Volume = 75;
         }
@@ -55,7 +53,6 @@ namespace NowAndDoing
                     Settings value = new JavaScriptSerializer().Deserialize<Settings>(File.ReadAllText(FilePath));
                     if (value != null)
                     {
-                        if (String.IsNullOrWhiteSpace(value.AppId)) value.AppId = DefaultAppId;
                         if (value.Files == null) value.Files = new List<string>();
                         value.Files = value.Files.Where(File.Exists).ToList();
                         value.Volume = Math.Max(0, Math.Min(100, value.Volume));
@@ -162,7 +159,6 @@ namespace NowAndDoing
         private readonly AutoResetEvent changed = new AutoResetEvent(false);
         private readonly Thread worker;
         private readonly Action<string> report;
-        private string appId = "";
         private PresenceState presence = new PresenceState();
         private bool dirty = true;
         private bool stopping;
@@ -182,11 +178,10 @@ namespace NowAndDoing
             worker.Start();
         }
 
-        public void Set(string id, PresenceState state)
+        public void Set(PresenceState state)
         {
             lock (gate)
             {
-                appId = id == null ? "" : id.Trim();
                 presence = state;
                 dirty = true;
             }
@@ -195,39 +190,22 @@ namespace NowAndDoing
 
         private void Run()
         {
-            string connectedId = "";
             DateTime lastSent = DateTime.MinValue;
             while (true)
             {
-                string id;
                 PresenceState state;
                 bool send;
                 lock (gate)
                 {
                     if (stopping) break;
-                    id = appId;
                     state = presence;
                     send = dirty;
-                }
-                if (!IsValidId(id))
-                {
-                    Disconnect();
-                    connectedId = "";
-                    report("Add a Discord app ID in settings");
-                    changed.WaitOne(10000);
-                    continue;
-                }
-                if (pipe != null && connectedId != id)
-                {
-                    try { SendActivity(null); } catch { }
-                    Disconnect();
                 }
                 if (pipe == null)
                 {
                     try
                     {
-                        pipe = Connect(id);
-                        connectedId = id;
+                        pipe = Connect(Settings.ApplicationId);
                         lastSent = DateTime.MinValue;
                         lock (gate) dirty = true;
                     }
@@ -276,12 +254,6 @@ namespace NowAndDoing
             }
             try { if (pipe != null) SendActivity(null); } catch { }
             Disconnect();
-        }
-
-        public static bool IsValidId(string id)
-        {
-            if (String.IsNullOrWhiteSpace(id) || id.Length < 17 || id.Length > 21) return false;
-            return id.All(Char.IsDigit);
         }
 
         private NamedPipeClientStream Connect(string id)
