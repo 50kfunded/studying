@@ -1,6 +1,6 @@
 # studying
 
-i made a small windows app where i can set what im studying and play songs from my music folder. it shows both on my discord status.
+i made a small windows app where i can set what im studying and has its own local mini music player. it shows what im studying (task i set on the app) and the song im actively listening to on my discord status.
 
 ![the app](preview.png)
 
