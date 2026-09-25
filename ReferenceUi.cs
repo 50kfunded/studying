@@ -709,7 +709,8 @@ namespace NowAndDoing
 
         private void MediaEnded()
         {
-            if (current + 1 < tracks.Count) { current++; PlayCurrent(); }
+            // keep playing from the start when the last song ends
+            if (tracks.Count > 0) Next();
             else { playing = false; player.Stop(); UpdatePresence(); Invalidate(); }
         }
 
