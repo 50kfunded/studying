@@ -13,9 +13,9 @@ i made a small windows app where i can set what im studying and has its own loca
 ## using it
 
 - download [studying.exe](studying.exe) and open it on windows. it needs .net framework 4.8.
-- put your songs in a `music` folder on your desktop. it plays them in file name order, or you can press shuffle. the volume stays where you set it when the song changes.
+- if you want music, put your songs in a `music` folder on your desktop. it plays them in file name order, or you can press shuffle. the volume stays where you set it when the song changes.
 - type what youre studying and press **start focus**. discord will show `studying [your task]` and, while a song is playing, `listening to [file name]`. the timer shows how long youve been studying.
-- keep the discord desktop app open with activity sharing turned on. everyone uses the same `studying` app id, so theres nothing to set up in the developer portal.
+- keep the discord desktop app open. in discord, click the gear next to your name, open **activity sharing**, and turn on **share my activity**. [discord shows how to find it here](https://support.discord.com/hc/en-us/articles/7931156448919-Activity-Sharing-on-Discord-FAQ). you dont need to make your own discord app or add an id.
 - press the x in the top right to quit.
 
 your songs stay on your pc. the app reads them from `Desktop\music` and saves its settings in `%LOCALAPPDATA%\NowAndDoing\settings.json`.
