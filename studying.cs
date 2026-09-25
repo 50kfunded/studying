@@ -27,6 +27,8 @@ namespace NowAndDoing
 
     internal sealed class Settings
     {
+        // discord uses this app id, so nobody has to set one up first
+        public const string DefaultAppId = "1552779992709079194";
         public string AppId { get; set; }
         public List<string> Files { get; set; }
         public int Volume { get; set; }
@@ -34,7 +36,7 @@ namespace NowAndDoing
 
         public Settings()
         {
-            AppId = "";
+            AppId = DefaultAppId;
             Files = new List<string>();
             Volume = 75;
         }
@@ -53,6 +55,7 @@ namespace NowAndDoing
                     Settings value = new JavaScriptSerializer().Deserialize<Settings>(File.ReadAllText(FilePath));
                     if (value != null)
                     {
+                        if (String.IsNullOrWhiteSpace(value.AppId)) value.AppId = DefaultAppId;
                         if (value.Files == null) value.Files = new List<string>();
                         value.Files = value.Files.Where(File.Exists).ToList();
                         value.Volume = Math.Max(0, Math.Min(100, value.Volume));

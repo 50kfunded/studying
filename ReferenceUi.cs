@@ -768,7 +768,7 @@ namespace NowAndDoing
                 dialog.ForeColor = White;
                 dialog.Font = regularFont;
                 Label heading = new Label { Text = "Discord application ID", Left = 20, Top = 20, Width = 335, Height = 25, Font = boldFont, ForeColor = White };
-                Label help = new Label { Text = "Paste the numeric ID from Discord Developer Portal.", Left = 20, Top = 52, Width = 350, Height = 25, ForeColor = Muted };
+                Label help = new Label { Text = "optional: use your own discord app id instead.", Left = 20, Top = 52, Width = 350, Height = 25, ForeColor = Muted };
                 TextBox input = new TextBox { Text = settings.AppId, Left = 20, Top = 82, Width = 350, Font = regularFont, BackColor = CardBottom, ForeColor = White, BorderStyle = BorderStyle.FixedSingle };
                 Label warning = new Label { Left = 20, Top = 111, Width = 350, Height = 19, ForeColor = Color.FromArgb(230, 157, 157) };
                 Button save = new Button { Text = "Save", Left = 290, Top = 143, Width = 80, Height = 30, FlatStyle = FlatStyle.Flat, BackColor = White, ForeColor = Back };
