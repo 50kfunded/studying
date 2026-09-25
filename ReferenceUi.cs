@@ -123,8 +123,8 @@ namespace NowAndDoing
             if (settings.Shuffle) ShuffleTracks(tracks);
             if (tracks.Count > 0) current = 0;
             RefreshSize();
-            player.Volume = settings.Volume / 100.0;
-            player.MediaOpened += delegate { duration = player.NaturalDuration.HasTimeSpan ? player.NaturalDuration.TimeSpan : TimeSpan.Zero; UpdatePresence(); Invalidate(); };
+            ApplyVolume();
+            player.MediaOpened += delegate { ApplyVolume(); duration = player.NaturalDuration.HasTimeSpan ? player.NaturalDuration.TimeSpan : TimeSpan.Zero; UpdatePresence(); Invalidate(); };
             player.MediaEnded += delegate { MediaEnded(); };
             player.MediaFailed += (sender, args) => { MediaFailed(args.ErrorException == null ? "This audio file could not be played." : args.ErrorException.Message); };
             rpc = new DiscordRpc(SetDiscordStatus);
@@ -531,8 +531,14 @@ namespace NowAndDoing
         private void SetVolume(int mouseX, Rectangle bar)
         {
             settings.Volume = Math.Max(0, Math.Min(100, (int)Math.Round((mouseX - bar.Left) * 100.0 / bar.Width)));
-            player.Volume = settings.Volume / 100.0;
+            ApplyVolume();
             Invalidate();
+        }
+
+        private void ApplyVolume()
+        {
+            // closing a song resets the volume so set it again for the next one
+            player.Volume = settings.Volume / 100.0;
         }
 
         private void ToggleFocus()
@@ -658,6 +664,7 @@ namespace NowAndDoing
                 player.Close();
                 duration = TimeSpan.Zero;
                 player.Open(new Uri(tracks[current].PathName));
+                ApplyVolume();
                 player.Play();
                 playing = true;
                 UpdatePresence();
