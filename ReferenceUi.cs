@@ -90,7 +90,7 @@ namespace NowAndDoing
         public ReferenceForm()
         {
             settings = Settings.Load();
-            Text = "now / doing";
+            Text = "lock in";
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.None;
@@ -265,9 +265,7 @@ namespace NowAndDoing
             }
             using (Pen outline = new Pen(Color.FromArgb(177, 183, 180), 1f))
             using (GraphicsPath border = Rounded(new RectangleF(iconRect.X + .5f, iconRect.Y + .5f, iconRect.Width - 1, iconRect.Height - 1), 6)) g.DrawPath(outline, border);
-            Label(g, "now", brandFont, White, 49, 18, 29, 22);
-            Label(g, "/", brandFont, Muted, 78, 18, 10, 22);
-            Label(g, "doing", brandFont, White, 85, 18, 50, 22);
+            Label(g, "lock in", brandFont, White, 49, 18, 90, 22);
             float cx = layout.ExitButton.X + layout.ExitButton.Width / 2f;
             float cy = layout.ExitButton.Y + layout.ExitButton.Height / 2f;
             using (Pen pen = new Pen(Muted, 1.5f))
@@ -749,7 +747,7 @@ namespace NowAndDoing
             ToolStripItem status = menu.Items.Add(discordStatus);
             status.Enabled = false;
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("Quit studying", null, delegate { Close(); });
+            menu.Items.Add("Quit lock in", null, delegate { Close(); });
             UiLayout layout = CurrentLayout();
             menu.Show(this, new Point(layout.Width - 165, layout.Footer - menu.PreferredSize.Height - 4));
         }

@@ -10,7 +10,7 @@ foreach ($needed in @($compiler, $windowsBase, $presentationCore)) {
 
 $dist = Join-Path $PSScriptRoot 'dist'
 New-Item -ItemType Directory -Path $dist -Force | Out-Null
-$app = Join-Path $dist 'studying.exe'
+$app = Join-Path $dist 'lock in.exe'
 $icon = Join-Path $PSScriptRoot 'studying.ico'
 $photo = Join-Path $PSScriptRoot 'studying-photo.png'
 $main = Join-Path $PSScriptRoot 'studying.cs'
