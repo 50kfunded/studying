@@ -2,9 +2,13 @@
 
 i made a small windows app where i can set what im studying and has its own local mini music player. it shows what im studying (task i set on the app) and the song im actively listening to on my discord status.
 
-![the app](<img width="430" height="509" alt="image" src="https://github.com/user-attachments/assets/7c06506c-9db2-47ad-b6e6-17d984380fe7" />
-)
-what it looks like on discord profile: <img width="297" height="367" alt="image" src="https://github.com/user-attachments/assets/1a146b5f-544c-4b5b-aaf0-02440a476327" />
+## the app
+
+![the app ui](preview.png)
+
+## what it looks like on discord
+
+<img width="297" height="367" alt="discord profile status" src="https://github.com/user-attachments/assets/1a146b5f-544c-4b5b-aaf0-02440a476327" />
 
 ## using it
 
