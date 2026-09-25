@@ -11,10 +11,10 @@ foreach ($needed in @($compiler, $windowsBase, $presentationCore)) {
 $dist = Join-Path $PSScriptRoot 'dist'
 New-Item -ItemType Directory -Path $dist -Force | Out-Null
 $app = Join-Path $dist 'studying.exe'
-$icon = Join-Path $PSScriptRoot 'assets\studying.ico'
-$photo = Join-Path $PSScriptRoot 'assets\studying-photo.png'
-$main = Join-Path $PSScriptRoot 'src\studying.cs'
-$ui = Join-Path $PSScriptRoot 'src\ReferenceUi.cs'
+$icon = Join-Path $PSScriptRoot 'studying.ico'
+$photo = Join-Path $PSScriptRoot 'studying-photo.png'
+$main = Join-Path $PSScriptRoot 'studying.cs'
+$ui = Join-Path $PSScriptRoot 'ReferenceUi.cs'
 
 & $compiler /nologo /target:winexe "/out:$app" "/win32icon:$icon" "/resource:$photo,StudyingPhoto" `
     /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll `
