@@ -23,6 +23,7 @@ namespace NowAndDoing
         private static readonly Color Muted = Color.FromArgb(149, 157, 160);
         private static readonly Color Green = Color.FromArgb(149, 195, 173);
         private readonly Settings settings;
+        private readonly FocusHistory history;
         private readonly List<Track> tracks = new List<Track>();
         private readonly Random shuffleRandom = new Random();
         private readonly MediaPlayer player = new MediaPlayer();
@@ -42,6 +43,9 @@ namespace NowAndDoing
         private string discordStatus = "Connecting…";
         private bool focusActive;
         private DateTime focusStart;
+        private FocusSession activeSession;
+        private bool historyAvailable = true;
+        private bool historySaveWarningShown;
         private bool playing;
         private int current = -1;
         private TimeSpan duration = TimeSpan.Zero;
@@ -68,6 +72,7 @@ namespace NowAndDoing
             public Rectangle FocusRect { get { return Active ? new Rectangle(18, FocusCard, 396, FocusHeight) : new Rectangle(16, FocusCard, 376, FocusHeight); } }
             public Rectangle MusicRect { get { return Active ? new Rectangle(18, MusicCard, 396, MusicHeight) : new Rectangle(16, MusicCard, 376, MusicHeight); } }
             public Rectangle FocusButton { get { return Active ? (FocusStarted ? new Rectangle(305, FocusCard + 58, 91, 33) : new Rectangle(284, FocusCard + 58, 112, 33)) : new Rectangle(263, FocusCard + 63, 109, 32); } }
+            public Rectangle HistoryButton { get { return new Rectangle(Width - 170, FocusLabel - 6, 70, 25); } }
             public Rectangle ShuffleButton { get { return new Rectangle(Width - 105, MusicLabel - 8, 90, 24); } }
             public Rectangle PlayButton { get { return new Rectangle(Width / 2 - 20, MusicCard + 110, 40, 40); } }
             public Rectangle PrevButton { get { return new Rectangle(Width / 2 - 65, MusicCard + 111, 32, 38); } }
@@ -90,6 +95,17 @@ namespace NowAndDoing
         public ReferenceForm()
         {
             settings = Settings.Load();
+            try { history = FocusHistory.Load(FocusHistory.DefaultPath); }
+            catch (Exception error)
+            {
+                history = FocusHistory.Empty(FocusHistory.DefaultPath);
+                historyAvailable = false;
+                Shown += delegate
+                {
+                    MessageBox.Show(this, "the study log couldnt be opened, so new sessions wont overwrite it.\n\n" + error.Message,
+                        "study log", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                };
+            }
             Text = "lock in";
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
@@ -139,6 +155,7 @@ namespace NowAndDoing
             StartMusicWatcher();
             FormClosing += delegate
             {
+                if (focusActive) FinishFocus(DateTime.UtcNow);
                 closing = true;
                 tick.Stop();
                 if (musicWatcher != null) musicWatcher.Dispose();
@@ -278,6 +295,8 @@ namespace NowAndDoing
         private void DrawFocus(Graphics g, UiLayout layout)
         {
             TrackedLabel(g, "CURRENT FOCUS", layout.Active ? 18 : 16, layout.FocusLabel);
+            Rectangle historyLink = layout.HistoryButton;
+            Label(g, "history", regularFont, Green, historyLink.X + 9, historyLink.Y + 2, 60, 20);
             string elapsed = focusActive ? FormatTime(DateTime.UtcNow - focusStart) : "00:00";
             RightLabel(g, elapsed, smallFont, Muted, layout.Width - 76, layout.FocusLabel - 1, 58, 18);
             FillRounded(g, layout.FocusRect, 15, CardTop, CardBottom, Color.FromArgb(53, 57, 60));
@@ -442,9 +461,16 @@ namespace NowAndDoing
         private void CommitTaskEditor()
         {
             if (!taskEditor.Visible) return;
-            taskDraft = taskEditor.Text.Trim();
+            string updatedTask = taskEditor.Text.Trim();
             taskEditor.Visible = false;
-            if (focusActive && taskDraft.Length == 0) focusActive = false;
+            if (focusActive && !String.Equals(updatedTask, taskDraft, StringComparison.Ordinal))
+            {
+                DateTime changedAt = DateTime.UtcNow;
+                FinishFocus(changedAt);
+                taskDraft = updatedTask;
+                if (taskDraft.Length > 0) StartFocus(taskDraft, changedAt);
+            }
+            else taskDraft = updatedTask;
             RefreshSize();
             UpdatePresence();
         }
@@ -494,7 +520,7 @@ namespace NowAndDoing
             else
             {
                 Point p = e.Location;
-                bool clickable = layout.FocusButton.Contains(p) || layout.ShuffleButton.Contains(p) || layout.PlayButton.Contains(p) || layout.PrevButton.Contains(p) || layout.NextButton.Contains(p) || layout.ExitButton.Contains(p) || layout.FooterButton.Contains(p) || layout.TrackCount.Contains(p) || new Rectangle(32, layout.FocusCard + 17, layout.Width - 64, 42).Contains(p);
+                bool clickable = layout.FocusButton.Contains(p) || layout.HistoryButton.Contains(p) || layout.ShuffleButton.Contains(p) || layout.PlayButton.Contains(p) || layout.PrevButton.Contains(p) || layout.NextButton.Contains(p) || layout.ExitButton.Contains(p) || layout.FooterButton.Contains(p) || layout.TrackCount.Contains(p) || new Rectangle(32, layout.FocusCard + 17, layout.Width - 64, 42).Contains(p);
                 Cursor = clickable ? Cursors.Hand : Cursors.Default;
             }
         }
@@ -516,6 +542,7 @@ namespace NowAndDoing
             if (e.Button != MouseButtons.Left) return;
             Point p = e.Location;
             if (layout.ExitButton.Contains(p)) { Close(); return; }
+            if (layout.HistoryButton.Contains(p)) { ShowHistory(); return; }
             if (layout.FocusButton.Contains(p)) { ToggleFocus(); return; }
             if (new Rectangle(32, layout.FocusCard + 17, layout.Width - 64, 42).Contains(p)) { BeginTaskEditor(); return; }
             if (layout.ShuffleButton.Contains(p)) { ToggleShuffle(); return; }
@@ -542,15 +569,57 @@ namespace NowAndDoing
         private void ToggleFocus()
         {
             CommitTaskEditor();
-            if (focusActive) focusActive = false;
+            if (focusActive) FinishFocus(DateTime.UtcNow);
             else
             {
                 if (taskDraft.Length == 0) { BeginTaskEditor(); return; }
-                focusActive = true;
-                focusStart = DateTime.UtcNow;
+                StartFocus(taskDraft, DateTime.UtcNow);
             }
             RefreshSize();
             UpdatePresence();
+        }
+
+        private void StartFocus(string task, DateTime startedAt)
+        {
+            focusActive = true;
+            focusStart = startedAt;
+            if (!historyAvailable) return;
+            activeSession = history.Start(task, startedAt);
+            SaveHistory();
+        }
+
+        private void FinishFocus(DateTime finishedAt)
+        {
+            if (!focusActive) return;
+            focusActive = false;
+            if (activeSession == null) return;
+            history.Finish(activeSession, finishedAt);
+            activeSession = null;
+            SaveHistory();
+        }
+
+        private void SaveHistory()
+        {
+            if (!historyAvailable) return;
+            try { history.Save(); historySaveWarningShown = false; }
+            catch (Exception error)
+            {
+                if (historySaveWarningShown) return;
+                historySaveWarningShown = true;
+                MessageBox.Show(this, "the study log couldnt be saved.\n\n" + error.Message,
+                    "study log", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowHistory()
+        {
+            if (!historyAvailable)
+            {
+                MessageBox.Show(this, "the study log couldnt be opened. its existing file has been left alone.",
+                    "study log", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            using (FocusHistoryForm window = new FocusHistoryForm(history, activeSession)) window.ShowDialog(this);
         }
 
         private void ShuffleTracks(List<Track> items)
