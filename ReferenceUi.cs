@@ -46,6 +46,8 @@ namespace NowAndDoing
         private FocusSession activeSession;
         private bool historyAvailable = true;
         private bool historySaveWarningShown;
+        private bool historyPage;
+        private int historyScroll;
         private bool playing;
         private int current = -1;
         private TimeSpan duration = TimeSpan.Zero;
@@ -78,6 +80,7 @@ namespace NowAndDoing
             public Rectangle PrevButton { get { return new Rectangle(Width / 2 - 65, MusicCard + 111, 32, 38); } }
             public Rectangle NextButton { get { return new Rectangle(Width / 2 + 33, MusicCard + 111, 32, 38); } }
             public Rectangle ExitButton { get { return new Rectangle(Width - 50, 13, 29, 29); } }
+            public Rectangle BackButton { get { return new Rectangle(11, 10, 35, 37); } }
             public Rectangle FooterButton { get { return Active ? new Rectangle(348, Footer + 16, 66, 26) : new Rectangle(329, Footer + 19, 63, 25); } }
             public Rectangle TrackCount { get { return new Rectangle(Width - 91, MusicCard + 12, 55, 24); } }
             public Rectangle MusicProgress { get { return Active ? new Rectangle(35, MusicCard + 77, 363, 4) : new Rectangle(38, MusicCard + 79, 335, 4); } }
@@ -262,9 +265,10 @@ namespace NowAndDoing
             {
                 g.DrawRectangle(border, .5f, .5f, layout.Width - 1, layout.Height - 1);
                 g.DrawLine(divider, 0, layout.HeaderLine, layout.Width, layout.HeaderLine);
-                g.DrawLine(divider, 0, layout.Footer, layout.Width, layout.Footer);
+                if (!historyPage) g.DrawLine(divider, 0, layout.Footer, layout.Width, layout.Footer);
             }
             DrawHeader(g, layout);
+            if (historyPage) { DrawHistory(g, layout); return; }
             DrawFocus(g, layout);
             DrawMusic(g, layout);
             DrawFooter(g, layout);
@@ -272,17 +276,31 @@ namespace NowAndDoing
 
         private void DrawHeader(Graphics g, UiLayout layout)
         {
-            Rectangle iconRect = new Rectangle(18, 16, 23, 23);
-            if (logo != null)
+            if (historyPage)
             {
-                GraphicsState saved = g.Save();
-                using (GraphicsPath clip = Rounded(iconRect, 6)) g.SetClip(clip);
-                g.DrawImage(logo, iconRect);
-                g.Restore(saved);
+                using (Pen arrow = new Pen(White, 1.6f))
+                {
+                    float x = 26, y = 28;
+                    g.DrawLine(arrow, x + 6, y, x - 5, y);
+                    g.DrawLine(arrow, x - 5, y, x, y - 5);
+                    g.DrawLine(arrow, x - 5, y, x, y + 5);
+                }
+                Label(g, "study log", brandFont, White, 52, 18, 140, 22);
             }
-            using (Pen outline = new Pen(Color.FromArgb(177, 183, 180), 1f))
-            using (GraphicsPath border = Rounded(new RectangleF(iconRect.X + .5f, iconRect.Y + .5f, iconRect.Width - 1, iconRect.Height - 1), 6)) g.DrawPath(outline, border);
-            Label(g, "lock in", brandFont, White, 49, 18, 90, 22);
+            else
+            {
+                Rectangle iconRect = new Rectangle(18, 16, 23, 23);
+                if (logo != null)
+                {
+                    GraphicsState saved = g.Save();
+                    using (GraphicsPath clip = Rounded(iconRect, 6)) g.SetClip(clip);
+                    g.DrawImage(logo, iconRect);
+                    g.Restore(saved);
+                }
+                using (Pen outline = new Pen(Color.FromArgb(177, 183, 180), 1f))
+                using (GraphicsPath border = Rounded(new RectangleF(iconRect.X + .5f, iconRect.Y + .5f, iconRect.Width - 1, iconRect.Height - 1), 6)) g.DrawPath(outline, border);
+                Label(g, "lock in", brandFont, White, 49, 18, 90, 22);
+            }
             float cx = layout.ExitButton.X + layout.ExitButton.Width / 2f;
             float cy = layout.ExitButton.Y + layout.ExitButton.Height / 2f;
             using (Pen pen = new Pen(Muted, 1.5f))
@@ -481,16 +499,48 @@ namespace NowAndDoing
             else if (args.KeyCode == Keys.Escape) { taskEditor.Visible = false; Invalidate(); args.SuppressKeyPress = true; }
         }
 
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (historyPage)
+            {
+                if (e.KeyCode == Keys.Escape || e.KeyCode == Keys.Back) { historyPage = false; Invalidate(); }
+                else if (e.KeyCode == Keys.Down) ScrollHistory(1);
+                else if (e.KeyCode == Keys.Up) ScrollHistory(-1);
+                else if (e.KeyCode == Keys.PageDown) ScrollHistory(HistoryRowsVisible(CurrentLayout()));
+                else if (e.KeyCode == Keys.PageUp) ScrollHistory(-HistoryRowsVisible(CurrentLayout()));
+                else { base.OnKeyDown(e); return; }
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return;
+            }
+            base.OnKeyDown(e);
+        }
+
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            base.OnMouseWheel(e);
+            if (historyPage) ScrollHistory(e.Delta < 0 ? 1 : -1);
+        }
+
+        private void ScrollHistory(int change)
+        {
+            int last = Math.Max(0, history.Sessions.Count - HistoryRowsVisible(CurrentLayout()));
+            historyScroll = Math.Max(0, Math.Min(last, historyScroll + change));
+            Invalidate();
+        }
+
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
             UiLayout layout = CurrentLayout();
             if (e.Button != MouseButtons.Left) return;
-            if (e.Y < layout.HeaderLine && !layout.ExitButton.Contains(e.Location))
+            if (e.Y < layout.HeaderLine && !layout.ExitButton.Contains(e.Location) &&
+                !(historyPage && layout.BackButton.Contains(e.Location)))
             {
                 ReleaseCapture(); SendMessage(Handle, 0xA1, 2, 0);
                 return;
             }
+            if (historyPage) return;
             Rectangle bar = layout.MusicProgress;
             if (new Rectangle(bar.X - 6, bar.Y - 10, bar.Width + 12, 22).Contains(e.Location) && current >= 0 && duration.TotalSeconds > 0)
             {
@@ -510,6 +560,11 @@ namespace NowAndDoing
         {
             base.OnMouseMove(e);
             UiLayout layout = CurrentLayout();
+            if (historyPage)
+            {
+                Cursor = layout.BackButton.Contains(e.Location) || layout.ExitButton.Contains(e.Location) ? Cursors.Hand : Cursors.Default;
+                return;
+            }
             if (draggingProgress)
             {
                 Rectangle bar = layout.MusicProgress;
@@ -538,6 +593,13 @@ namespace NowAndDoing
                 return;
             }
             if (draggingVolume) { draggingVolume = false; settings.Save(); return; }
+            if (historyPage)
+            {
+                if (e.Button != MouseButtons.Left) return;
+                if (layout.ExitButton.Contains(e.Location)) Close();
+                else if (layout.BackButton.Contains(e.Location)) { historyPage = false; Invalidate(); }
+                return;
+            }
             if (e.Button == MouseButtons.Right && e.Y >= layout.Footer) { ShowInfoMenu(); return; }
             if (e.Button != MouseButtons.Left) return;
             Point p = e.Location;
@@ -611,6 +673,66 @@ namespace NowAndDoing
             }
         }
 
+        private int HistoryRowsVisible(UiLayout layout)
+        {
+            return Math.Max(1, (layout.Height - 150) / 72);
+        }
+
+        private void DrawHistory(Graphics g, UiLayout layout)
+        {
+            int left = layout.Active ? 18 : 16;
+            int width = layout.Active ? 396 : 376;
+            TrackedLabel(g, "FOCUS HISTORY", left, 80);
+            string count = history.Sessions.Count == 1 ? "1 session" : history.Sessions.Count + " sessions";
+            RightLabel(g, count, smallFont, Muted, layout.Width - 115, 79, 97, 18);
+            Label(g, "your tasks and time studied", regularFont, Muted, left, 105, width, 20);
+
+            if (history.Sessions.Count == 0)
+            {
+                FillRounded(g, new Rectangle(left, 143, width, 112), 14, CardTop, CardBottom, Line);
+                Label(g, "no sessions yet", boldFont, White, left + 18, 166, width - 36, 24);
+                Label(g, "start a task and itll show here", regularFont, Muted, left + 18, 194, width - 36, 22);
+                return;
+            }
+
+            List<FocusSession> sessions = history.Sessions.OrderByDescending(item => item.StartedUtcTicks).ToList();
+            int visible = HistoryRowsVisible(layout);
+            historyScroll = Math.Max(0, Math.Min(historyScroll, Math.Max(0, sessions.Count - visible)));
+            for (int row = 0; row < visible && row + historyScroll < sessions.Count; row++)
+            {
+                FocusSession session = sessions[row + historyScroll];
+                Rectangle card = new Rectangle(left, 141 + row * 72, width, 64);
+                FillRounded(g, card, 12, CardTop, CardBottom, Line);
+                bool currentSession = Object.ReferenceEquals(session, activeSession) && session.FinishedUtcTicks == 0;
+                string studied = session.FinishedUtcTicks == 0 && !currentSession ? "—" :
+                    FormatStudyTime((session.FinishedUtc ?? DateTime.UtcNow) - session.StartedUtc);
+                Label(g, session.Task, boldFont, White, card.X + 14, card.Y + 8, card.Width - 112, 22);
+                RightLabel(g, studied, boldFont, currentSession ? Green : White, card.Right - 98, card.Y + 8, 84, 22);
+                string started = "start  " + session.StartedUtc.ToLocalTime().ToString("dd MMM HH:mm");
+                string finished = session.FinishedUtc.HasValue ? "finish  " + session.FinishedUtc.Value.ToLocalTime().ToString("dd MMM HH:mm") :
+                    currentSession ? "in progress" : "unfinished";
+                Label(g, started, regularFont, Muted, card.X + 14, card.Y + 36, card.Width / 2 - 14, 18);
+                Label(g, finished, regularFont, Muted, card.X + card.Width / 2, card.Y + 36, card.Width / 2 - 14, 18);
+            }
+
+            if (sessions.Count > visible)
+            {
+                int trackHeight = visible * 72 - 8;
+                int thumbHeight = Math.Max(24, trackHeight * visible / sessions.Count);
+                int thumbY = 141 + (trackHeight - thumbHeight) * historyScroll / (sessions.Count - visible);
+                using (SolidBrush thumb = new SolidBrush(Color.FromArgb(104, 113, 113)))
+                    g.FillRectangle(thumb, layout.Width - 9, thumbY, 3, thumbHeight);
+            }
+        }
+
+        private static string FormatStudyTime(TimeSpan time)
+        {
+            if (time < TimeSpan.Zero) time = TimeSpan.Zero;
+            if (time.TotalHours >= 1)
+                return ((long)time.TotalHours) + ":" + time.Minutes.ToString("00") + ":" + time.Seconds.ToString("00");
+            return time.Minutes + ":" + time.Seconds.ToString("00");
+        }
+
         private void ShowHistory()
         {
             if (!historyAvailable)
@@ -619,7 +741,10 @@ namespace NowAndDoing
                     "study log", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            using (FocusHistoryForm window = new FocusHistoryForm(history, activeSession)) window.ShowDialog(this);
+            CommitTaskEditor();
+            historyScroll = 0;
+            historyPage = true;
+            Invalidate();
         }
 
         private void ShuffleTracks(List<Track> items)

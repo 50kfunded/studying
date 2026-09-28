@@ -16,11 +16,10 @@ $photo = Join-Path $PSScriptRoot 'studying-photo.png'
 $main = Join-Path $PSScriptRoot 'studying.cs'
 $ui = Join-Path $PSScriptRoot 'ReferenceUi.cs'
 $history = Join-Path $PSScriptRoot 'FocusHistory.cs'
-$historyUi = Join-Path $PSScriptRoot 'FocusHistoryForm.cs'
 
 & $compiler /nologo /target:winexe "/out:$app" "/win32icon:$icon" "/resource:$photo,StudyingPhoto" `
     /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll `
-    "/reference:$windowsBase" "/reference:$presentationCore" $main $ui $history $historyUi
+    "/reference:$windowsBase" "/reference:$presentationCore" $main $ui $history
 
 if ($LASTEXITCODE -ne 0) { throw 'build failed' }
 Write-Output "built $app"
